@@ -80,7 +80,7 @@ def start_calculation(ch, method, properties, body):
 
 
 # Configure logging
-logging.basicConfig(filename='rabbitmq_logs.log', level=logging.INFO,
+logging.basicConfig(filename='../logs/rabbitmq_logs.log', level=logging.INFO,
                     format='%(asctime)s - %(levelname)s - %(message)s')
 
 rabbit_manager = RabbitMQManager()

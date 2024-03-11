@@ -1,6 +1,5 @@
 import json
 import logging
-
 import pika
 
 
@@ -13,7 +12,7 @@ class RabbitMQManager:
 
     def connect(self):
         # Read RabbitMQ credentials from secrets file
-        with open('secrets.json') as f:
+        with open('../config/secrets.json') as f:
             secrets = json.load(f)
 
         rabbitmq_host = secrets['rabbitmq_host']
@@ -40,7 +39,7 @@ class RabbitMQManager:
 
     def start_consuming(self, callback):
         self.channel.basic_consume(queue=self.request_queue, on_message_callback=callback, auto_ack=True)
-        print(' [*] Waiting for messages. To exit, press CTRL+C')
+        print(' [*] Waiting for messages')
         self.channel.start_consuming()
 
     def send_reply(self, message):
