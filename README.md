@@ -1,11 +1,55 @@
-# LengthNestPro
-LengthNestPro is a free software application for one-dimensional nest optimization.  It minimizes scrap when cutting raw material lengths into shorter pieces or parts.
+# LengthNestProMQ
+LengthNestProMQ is a free software application for one-dimensional nest optimization. It minimizes scrap when cutting raw material lengths into shorter pieces or parts.
 
-To use this software, do the following:
-  1. Install using .exe file
-  2. Open application
-  3. Enter part information in the top-left table
-  4. Enter nesting settings in the top-right table
-  5. Click Calculate
+It is an adaption of [LengthNestPro](https://github.com/sweiss93/LengthNestPro) from which the GUI is removed and RabbitMQ is integrated.   
 
-This software is still a work in progress, and further functionality and improvements will be added in the future.  If you have any questions, comments, or suggestions, feel free to email me at sweiss93@gmail.com
+To use the software:
+  1. Create a copy of the `secrets.default.json` file in the config directory.
+  2. Change the values of the entries in the `secrets.json file`. 
+  3. Run main.py
+  4. Add a message to a queue called: `stock_length_request_queue`
+  5. Get the response from the queue: `stock_length_response_queue`
+  6. Optionally view logs in logs directory
+
+
+The input should have the following format:
+```
+{
+  "required_parts": [
+    {
+      "name": string,
+      "length": number,
+      "quantity": number
+    },
+    ...
+  ],
+  "stock": {
+    "length": number,
+    "waste_left": number,
+    "waste_right": number,
+    "spacing": number,
+    "max_parts_per_nest": number,
+    "max_containers": number
+  }
+}
+```
+
+The output will have the following format: 
+```
+[
+  {
+    "parts": [
+      {
+        "name": string,
+        "length": number,
+        "quantity": number
+      },
+      ...
+    ],
+    "quantity": number,
+    "spacing": number,
+    "stock_length": number
+  },
+   ...
+]
+```
