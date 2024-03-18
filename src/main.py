@@ -3,8 +3,45 @@ import logging
 
 import numpy as np
 
+from LengthNestProMQ.src.day_based_rot_file_handler import DayBasedRotatingFileHandler
 from rabbitmq_manager import RabbitMQManager
 from nest_calculation_new import CalculateObject
+
+
+def is_valid_format(data):
+    # Check if the dictionary has all required keys
+    required_keys = ["required_parts", "stock"]
+    if not all(key in data for key in required_keys):
+        return False, "'required_parts' or 'stock' missing"
+
+    # Check the format of "required_parts"
+    required_parts = data.get("required_parts")
+    if not isinstance(required_parts, list):
+        return False, "'required_parts' must be a list"
+
+    for i, part in enumerate(required_parts):
+        if not isinstance(part, dict) or \
+                not all(key in part for key in ["name", "length", "quantity"]) or \
+                not isinstance(part["name"], str) or \
+                not isinstance(part["length"], (int, float)) or \
+                not isinstance(part["quantity"], int):
+            return False, f"Missing attributes in part number {i+1}, part: {part}"
+
+    # Check the format of "stock"
+    stock = data.get("stock")
+    if not isinstance(stock, dict) or \
+            not all(key in stock for key in
+                    ["length", "waste_left", "waste_right", "spacing", "max_parts_per_nest", "max_containers"]) or \
+            not isinstance(stock["length"], (int, float)) or \
+            not isinstance(stock["waste_left"], (int, float)) or \
+            not isinstance(stock["waste_right"], (int, float)) or \
+            not isinstance(stock["spacing"], (int, float)) or \
+            not isinstance(stock["max_parts_per_nest"], int) or \
+            not isinstance(stock["max_containers"], int):
+        return False, "Missing attributes in 'stock'"
+
+    return True, None
+
 
 
 def extract_data_from_json_formatted_string(json_formatted_string):
@@ -12,7 +49,48 @@ def extract_data_from_json_formatted_string(json_formatted_string):
     try:
         data = json.loads(json_formatted_string)
     except json.JSONDecodeError as e:
+        logger.error("Error decoding JSON:" + str(e))
         rabbit_manager.send_reply("Error decoding JSON:" + str(e))
+        return None
+    if type(data) is not dict:
+        logger.error(f"Error wrong input provided, expects JSON but got {type(data)} instead")
+        rabbit_manager.send_reply(f"Error wrong input provided, expects JSON but got {type(data)} instead")
+        return None
+
+    is_valid_format_, error_message = is_valid_format(data)
+
+    if not is_valid_format_:
+        response_string = f"""
+            Error wrong input provided.
+            {error_message}.
+            expects JSON in form:
+            {{
+              "required_parts": [
+                {{
+                  "name": "string",
+                  "length": number,
+                  "quantity": integer
+                }},
+                {{
+                  "name": "string",
+                  "length": number,
+                  "quantity": integer
+                }},
+                ...
+              ],
+              "stock": {{
+                "length": number,
+                "waste_left": integer,
+                "waste_right": integer,
+                "spacing": number,
+                "max_parts_per_nest": integer,
+                "max_containers": integer
+              }}
+            }}
+            but instead got: {data} 
+        """
+        logger.error(response_string)
+        rabbit_manager.send_reply(response_string)
         return None
 
     # Extract required parts data
@@ -33,8 +111,7 @@ def extract_data_from_json_formatted_string(json_formatted_string):
 
 
 def start_calculation(ch, method, properties, body):
-
-    logging.info(f"Received: {body}")
+    logger.info(f"Received: {body}")
     extracted_data = extract_data_from_json_formatted_string(body)
 
     if extracted_data is None:
@@ -79,9 +156,18 @@ def start_calculation(ch, method, properties, body):
     rabbit_manager.send_reply(json.dumps(parts_distribution))
 
 
-# Configure logging
-logging.basicConfig(filename='../logs/rabbitmq_logs.log', level=logging.INFO,
-                    format='%(asctime)s - %(levelname)s - %(message)s')
+# Create logger
+logger = logging.getLogger("DayBasedLogger")
+logger.setLevel(logging.INFO)
+
+# Create formatter
+formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+
+# Create handler
+handler = DayBasedRotatingFileHandler(filename='../logs/log_{date}.log', backup_count=60)
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+
 
 rabbit_manager = RabbitMQManager()
 

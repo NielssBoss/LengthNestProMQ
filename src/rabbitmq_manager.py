@@ -39,7 +39,6 @@ class RabbitMQManager:
 
     def start_consuming(self, callback):
         self.channel.basic_consume(queue=self.request_queue, on_message_callback=callback, auto_ack=True)
-        print(' [*] Waiting for messages')
         self.channel.start_consuming()
 
     def send_reply(self, message):

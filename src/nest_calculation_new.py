@@ -1,16 +1,8 @@
-import os
-
 import numpy as np
-import time
 import math
-from PyQt5.QtCore import pyqtSignal, QObject
-# from matplotlib import pyplot as plt
-# import matplotlib
+
 from column_sort import ColumnSorter
 import copy
-
-
-# matplotlib.use('Agg')
 
 
 # Create calculate thread class
