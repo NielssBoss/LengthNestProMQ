@@ -93,6 +93,8 @@ def extract_data_from_json_formatted_string(json_formatted_string):
         rabbit_manager.send_reply(response_string)
         return None
 
+    # Extract id
+    request_id = data["request_id"]
     # Extract required parts data
     required_parts = data["required_parts"]
 
@@ -105,7 +107,7 @@ def extract_data_from_json_formatted_string(json_formatted_string):
     stock = data["stock"]
 
     # Return extracted data
-    return (parts_lengths, parts_quant, parts_names,
+    return (request_id, parts_lengths, parts_quant, parts_names,
             stock["length"], stock["waste_left"], stock["waste_right"],
             stock["spacing"], stock["max_parts_per_nest"], stock["max_containers"])
 
@@ -117,7 +119,7 @@ def start_calculation(ch, method, properties, body):
     if extracted_data is None:
         return
 
-    (part_lengths, part_quantities, part_names,
+    (request_id, part_lengths, part_quantities, part_names,
      stock_length, left_waste, right_waste,
      spacing, max_parts_per_nest, max_containers
      ) = extracted_data
@@ -153,7 +155,7 @@ def start_calculation(ch, method, properties, body):
                 parts_distribution[j]["parts"].append(
                     {"name": part_names[i], "length": float(lengths[i]), "quantity": part_quantity})
 
-    rabbit_manager.send_reply(json.dumps(parts_distribution))
+    rabbit_manager.send_reply(json.dumps({"request_id": request_id, "parts_distribution": parts_distribution}))
 
 
 # Create logger
